@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.ericsson.nms.litp</groupId>
+  <artifactId>ERIClitpnassfs_CXP9030876</artifactId>
+  <packaging>rpm</packaging>
+  <name>[${project.parent.artifactId}] RPM module</name>
+  <description>LITP NAS library</description>
+  <parent>
+    <groupId>com.ericsson.nms.litp</groupId>
+    <artifactId>ERIClitpnassfs</artifactId>
+    <version>2.17.1-SNAPSHOT</version>
+  </parent>
+
+  <properties>
+    <!-- publishes the rpm module to the ci portal -->
+    <publish_artifact>true</publish_artifact>
+    <bom_version>RELEASE</bom_version>
+  </properties>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>rpm-maven-plugin</artifactId>
+        <extensions>true</extensions>
+        <inherited>true</inherited>
+        <configuration>
+          <requires>
+            <require>python &gt;= 2.7</require>
+            <require>python-requests</require>
+          </requires>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <!-- run nosetests -->
+            <configuration>
+              <executable>nosetests</executable>
+              <arguments>
+                <argument>--failure-detail</argument>
+                <argument>--with-xunit</argument>
+                <argument>--verbose</argument>
+                <argument>--with-doctest</argument>
+                <argument>--with-cov</argument>
+                <argument>--cov-report=term-missing</argument>
+                <argument>--cov=src</argument>
+                <argument>test</argument>
+                <argument>src</argument>
+              </arguments>
+            </configuration>
+            <id>nosetests</id>
+          </execution>
+          <execution>
+            <!--
+                                    run acceptance tests
+
+                                    This requires the "runats" tool provided by ERIClitpatrunner,
+                                    so this can only be run in modules that depend on that module.
+                                    There are modules where it can't be run (currently ERIClitpcore
+                                    and ERIClitpcli, since ERIClitprunner depends on those.
+                                    For those modules, it can be turned off by adding this in
+                                    their POMs:
+
+                                    <properties>
+                                        <com.ericsson.nms.litp.runats.skip>true</com.ericsson.nms.litp.runats.skip>
+                                    </properties>
+
+                                -->
+            <configuration>
+              <skip>${com.ericsson.nms.litp.runats.skip}</skip>
+              <executable>/bin/echo</executable>
+              <environmentVariables>
+                <PYTHONPATH>../target/deps/opt/ericsson/nms/litp/lib:${env.PYTHONPATH}</PYTHONPATH>
+              </environmentVariables>
+              <workingDirectory>.</workingDirectory>
+            </configuration>
+            <id>runats</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <profile>
+      <id>current-dep</id>
+      <activation>
+        <property>
+          <name>!UsingLatest</name>
+        </property>
+      </activation>
+    </profile>
+    <profile>
+      <id>latest-dep</id>
+      <properties>
+        <UsingLatest>true</UsingLatest>
+      </properties>
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>com.ericsson.litp</groupId>
+            <artifactId>ci-bom</artifactId>
+            <version>${bom_version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
+    </profile>
+  </profiles>
+</project>
